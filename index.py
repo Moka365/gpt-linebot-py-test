@@ -13,6 +13,8 @@ working_status = os.getenv("DEFALUT_TALKING", default = "true").lower() == "true
 app = Flask(__name__)
 chatgpt = ChatGPT()
 
+checktime=0
+
 # domain root
 @app.route('/')
 def home():
@@ -39,7 +41,11 @@ def handle_message(event):
     working_status = True
     
     if event.message.type != "text":
-        return
+        checktime+=1
+        if checktime >=5:
+            return '你已超出使用次數'
+        else:
+            return
     
 
     if working_status:
