@@ -13,7 +13,7 @@ working_status = os.getenv("DEFALUT_TALKING", default = "true").lower() == "true
 app = Flask(__name__)
 chatgpt = ChatGPT()
 
-checktime=0
+user_count = {}  # 建立一個 dict，用來儲存使用者的使用次數
 
 # domain root
 @app.route('/')
@@ -39,14 +39,36 @@ def callback():
 def handle_message(event):
     global working_status
     working_status = True
-    
     if event.message.type != "text":
-        checktime+=1
-        if checktime >=5:
-            return '你已超出使用次數'
+        return
+    user_id = event.source.user_id  # 取得使用者ID
+    if event.message.text == "請清除使用次數":  # 如果使用者傳來的訊息是 "XXXXX"，則清除該使用者的使用次數
+        if user_id in user_count:
+            user_count[user_id] = 0
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="已清除次數"))
         else:
-            return
-    
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="你沒有使用次數"))
+    else:
+        if user_id not in user_count:
+            user_count[user_id] = 0
+        
+        # 如果使用者已經使用超過 3 次，回傳警告訊息
+        if user_count[user_id] >= 3:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="你已超過使用次數"))
+        else:
+            # 使用者使用次數 +1
+            user_count[user_id] += 1
+        
+    if user_count[user_id] > 3:  # 檢查使用次數是否達到限制
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="您已超過使用次數限制。"))
 
     if working_status:
         chatgpt.add_msg(f"Human:{event.message.text}?\n")
