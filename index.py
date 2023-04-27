@@ -84,13 +84,22 @@ def handle_message(event):
         
         # 執行 資料庫 語法
         db.execute(
-            'SELECT COUNT(`username`) as users, `frequency` FROM `userlist` WHERE `username` = %s', (user_id))
+            'SELECT COUNT(`username`) as users, `frequency` FROM `gptest` WHERE `username` = %s', (user_id))
         # 顯示資料
         results = db.fetchall()
         
+        if event.message.text == "請清除使用次數":
+            db.execute("UPDATE `gptest` SET `frequency`= %s WHERE `username` = %s", ('0', user_id))
+            db.commit()
+            db.close()
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text="你好！"))
+            return
+        
+        
         if (results[0]['users'] == 0):
             db.execute(
-                'INSERT INTO userlist (`username`, `frequency`) VALUES (%s, %s)', (user_id, 1))
+                'INSERT INTO gptest (`username`, `frequency`) VALUES (%s, %s)', (user_id, 1))
             db.commit()  # 提交，否則不會新增到資料庫
         else:
             # 使用者發言次數超過 X 次時回覆訊息
@@ -103,22 +112,23 @@ def handle_message(event):
                 frequency = int(results[0]['frequency']) + 1
                 # 更新 資料庫 使用者 次數
                 db.execute(
-                    'UPDATE `userlist` SET `frequency`= %s WHERE `username` = %s', (frequency, user_id))
+                    'UPDATE `gptest` SET `frequency`= %s WHERE `username` = %s', (frequency, user_id))
                 db.commit()  # 提交，否則不會新增到資料庫
+        
+        
                 
         reply_msg = chatgpt.get_response().replace("AI:", "", 1)
         chatgpt.add_msg(f"AI:{reply_msg}\n")
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text=reply_msg))
-
-def reset_frequency(input_str):
-    # 在這裡實作你的條件判斷邏輯
-    if input_str == "指定字串":
-        cursor = Database.cursor()
-        cursor.execute("UPDATE yourtable SET frequency = 0")
-        Database.commit()
-        cursor.close()
+# def reset_frequency(input_str):
+#     # 在這裡實作你的條件判斷邏輯
+#     if input_str == "指定字串":
+#         cursor = Database.cursor()
+#         cursor.execute("UPDATE yourtable SET frequency = 0")
+#         Database.commit()
+#         cursor.close()
 
 # 調用函式
 # reset_frequency("要輸入的字串")
